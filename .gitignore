@@ -1,3 +1,20 @@
+# Ignore macOS debug symbol files (in any subdirectory)
+**/*.dSYM/
+
+# Ignore macOS Finder metadata (in any subdirectory)
+**/.DS_Store
+
+# Ignore .vscode
+/.vscode
+
+# Ignore everything in build/ except the pfsim binary
+build/*
+!build/pfsim
+
+# Ignore everything in data/ except demo_profile.ini
+data/*
+!data/demo_profile.ini
+
 # Prerequisites
 *.d
 
