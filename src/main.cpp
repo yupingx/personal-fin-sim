@@ -19,6 +19,7 @@
  * ============================================================================
  */
 #include <iostream>
+#include <memory>
 #include "../include/clparser.h"
 #include "../include/userDataLoading.h"
 #include "../include/asset.h"

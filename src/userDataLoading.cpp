@@ -36,6 +36,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <functional>
+#include <climits>
 #include "../include/userDataLoading.h"
 #include "../include/constants.h"
 

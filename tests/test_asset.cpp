@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <cmath>
+#include <climits>
 #include "asset.h"
 #include "modelRecession.h"
 
