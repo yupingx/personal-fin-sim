@@ -76,14 +76,32 @@ struct UserData {
     int contributionR401k;
 
     /**
+     * @brief Annual pension income (estimated) in today's dollars. Includes
+     *       government pensions such as Social Security and company pensions
+     *       and is assumed to grow at the rate of inflation.
+     */
+    int pensionEstimate;
+
+    /**
      * @brief Initial inflation rate. Must be in the range of [0, 1)
      */
     float initialInflation;
 
     /**
-     * @brief Number of years until retirement.
+     * @brief Number of years until retirement (meaning job income stops).
      */
     unsigned short yearsTillRetirement;
+
+    /**
+     * @brief Number of years before withdrawing from tax-deferred accounts.
+     */
+    unsigned short yearsTillWithdrawal;
+
+        /**
+     * @brief Number of years before pension income. This includes government
+     *       pensions such as Social Security and company pensions.
+     */
+    unsigned short yearsTillPension;
 };
 
 

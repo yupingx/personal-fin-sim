@@ -57,6 +57,7 @@ void Asset::clearCashReserve()
 void Asset::calculateN()
 {
 	long int distributable_total;
+	int pension_income;
 	float distribution_percentage;
 	int i;
 	bool cashAdded;
@@ -73,6 +74,14 @@ void Asset::calculateN()
 			contributionRoth_ = 0;
 			contributionIra_ = 0;
 			contributionR401k_ = 0;
+		}
+
+		if (i >= yearsTillPension_) {
+			/* If pension income is available */
+			pension_income = pensionEstimate_;
+		} 
+		else {
+			pension_income = 0;
 		}
 
 		/* Decide if we should use cash reserve
@@ -124,8 +133,8 @@ void Asset::calculateN()
 		/* Calculate current year actual expense and potential surplus for
 		 * investing considering this year's takehome income.
 		 * */
-		long int net_expense = std::max(expense_[i] - takehomeIncome_, (long int) 0);
-		long int contribution_individual = std::max(takehomeIncome_ - expense_[i], (long int) 0);
+		long int net_expense = std::max(expense_[i] - takehomeIncome_ - pension_income, (long int) 0);
+		long int contribution_individual = std::max(takehomeIncome_ + pension_income - expense_[i], (long int) 0);
 
 		if (net_expense > distributable_total)
 		{
@@ -152,8 +161,10 @@ void Asset::calculateN()
 
 		if (DEBUG_PRINT)
 		{
-			std::cout << "DEBUG: Takehome income: " \
+			std::cout << "DEBUG: Job income: " \
 			          << takehomeIncome_ << '\n';
+			std::cout << "DEBUG: Pension income: " \
+			          << pension_income << '\n';
 			std::cout << "DEBUG: Net expense (after considering income): " \
 			          << net_expense << '\n';
 			std::cout << "DEBUG: year " << CURRENT_YEAR + i \
@@ -211,14 +222,15 @@ void Asset::calculateN()
 			contributionIra_ = contributionIra_ * (1 + inflation_[i]);
 			contributionR401k_ = contributionR401k_ * (1 + inflation_[i]);
 
-			/* Grow user's next year takehome income by the rate of inflation */
+			/* Grow user's next year takehome job income by the rate of inflation */
 			takehomeIncome_ = takehomeIncome_ * (1 + inflation_[i]);
 
 		}
 
-		/* Update next year's projected expense: */
+		/* Update next year's projected expense and pension income: */
 		if (i + 1 < MAX_YEARS) {
 			expense_[i + 1] = expense_[i] * (1 + inflation_[i]);
+			pensionEstimate_ = pensionEstimate_ * (1 + inflation_[i]);
 		}
 
 		/* Finally, grow cash reserve (if available) by the rate of inflation */
@@ -254,7 +266,10 @@ void Asset::initializeFromUserData(const UserData& user) {
 	contributionRoth_ = user.contributionRoth;
 	contributionIra_ = user.contributionIra;
 	contributionR401k_ = user.contributionR401k;
+	pensionEstimate_ = user.pensionEstimate;
 	yearsTillRetirement_ = user.yearsTillRetirement;
+	yearsTillWithdrawal_ = user.yearsTillWithdrawal;
+	yearsTillPension_ = user.yearsTillPension;
 	inflation_[0] = user.initialInflation;
 	availability_[INDIVIDUAL_INDEX][0] = true;
 	availability_[ROTH_INDEX][0] = false;
@@ -269,7 +284,7 @@ void Asset::initializeFromUserData(const UserData& user) {
 			distribution_[c][i] = distribution_[c][0];
 			availability_[INDIVIDUAL_INDEX][i] = availability_[0][0];
 
-			if (i < user.yearsTillRetirement) {
+			if (i < user.yearsTillWithdrawal) {
 				availability_[ROTH_INDEX][i] = availability_[ROTH_INDEX][0];
 				availability_[IRA_INDEX][i] = availability_[IRA_INDEX][0];
 				availability_[R401K_INDEX][i] = availability_[R401K_INDEX][0];
@@ -289,10 +304,12 @@ Asset::Asset()
 	fundLongevity_ = 0;
 	cashReserve_ = 0;
 	yearsTillRetirement_ = 0;
+	yearsTillWithdrawal_ = 0;
 	takehomeIncome_ = 0;
 	contributionRoth_ = 0;
 	contributionIra_ = 0;
 	contributionR401k_ = 0;
+	pensionEstimate_ = 0;
 
 	for (int c = 0; c < MAX_ACCOUNTS; c++)
 	{

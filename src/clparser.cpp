@@ -27,7 +27,7 @@
 static void displayWelcomeMsg() {
     std::cout << std::endl;
     std::cout << "================================================" << std::endl;
-    std::cout << "       Personal Finance Simulator v0.1"           << std::endl;
+    std::cout << "       Personal Finance Simulator v0.2.0"         << std::endl;
     std::cout << "   (for personal use only; no advice implied)"    << std::endl;
     std::cout << "================================================" << std::endl;
     std::cout << std::endl;

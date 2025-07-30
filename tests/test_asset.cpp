@@ -424,3 +424,67 @@ TEST(AssetTest, MaxLongevityNoGrowthModel) {
     EXPECT_EQ(myAsset.distribution_[IRA_INDEX][MAX_YEARS-1], 0);
     EXPECT_EQ(myAsset.distribution_[R401K_INDEX][MAX_YEARS-1], Y);
 }
+
+TEST(AssetTest, SimpleIncomeSimplePensionNoInflationNoGrowthMaxModel) {
+    /* This test has a simple income, expense, pension,
+     * and assumes no inflation, growth, no recession.
+     */ 
+    Asset myAsset;
+    const unsigned int V = 0;
+    const unsigned int VALUE[MAX_ACCOUNTS] = {V, 0, 0, 0};
+    const float F = 0.0;
+    const unsigned int X = 1000; // Income
+    const unsigned int Y = 1000; // Expense
+    const unsigned int P = 1000; // Pension estimate
+    const unsigned int R = 4;
+
+    myAsset.takehomeIncome_ = X;
+    myAsset.yearsTillRetirement_ = R;
+    myAsset.yearsTillPension_ = R;
+    myAsset.pensionEstimate_ = P;
+    myAsset.expense_[0] = Y;
+    myAsset.inflation_[0] = F;
+
+    /* When pension starts the same year as income stops, and >= expense,
+     * the fund longevity should be maximum */
+    const unsigned int L_EXPECTED = MAX_YEARS;
+
+    myAsset.populateGrowthCurves(ModelOption::CONSTANT);
+    myAsset.calculateN();
+
+    EXPECT_EQ(myAsset.getFundLongevity(), L_EXPECTED);
+}
+
+TEST(AssetTest, SimpleIncomeSimplePensionNoInflationNoGrowthGapModel) {
+    /* This is a test very similar to 
+     * "SimpleIncomeSimplePensionNoInflationNoGrowthMaxModel", but there is a gap
+     * between income and pension
+     */
+    Asset myAsset;
+    const unsigned int V = 0;
+    const unsigned int VALUE[MAX_ACCOUNTS] = {V, 0, 0, 0};
+    const float F = 0.0;
+    const unsigned int X = 1000; // Income
+    const unsigned int Y = 1000; // Expense
+    const unsigned int P = 1000; // Pension estimate
+    const unsigned int R = 4;
+
+    myAsset.takehomeIncome_ = X;
+    myAsset.yearsTillRetirement_ = R;
+    // Note a 1-year gap between income and pension
+    myAsset.yearsTillPension_ = R + 1;
+    myAsset.pensionEstimate_ = P;
+    myAsset.expense_[0] = Y;
+    myAsset.inflation_[0] = F;
+
+    /* Because there is a gap between income and pension, and there is no
+     * other types of funds, the fund longevity is limited by the year income
+     * stops 
+     */
+    const unsigned int L_EXPECTED = R;
+
+    myAsset.populateGrowthCurves(ModelOption::CONSTANT);
+    myAsset.calculateN();
+
+    EXPECT_EQ(myAsset.getFundLongevity(), L_EXPECTED);
+}

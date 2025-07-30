@@ -2,6 +2,7 @@ enable_testing()
 
 add_executable(tests
     test_asset.cpp
+    test_dataloading.cpp
 )
 
 target_include_directories(tests PRIVATE

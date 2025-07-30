@@ -28,7 +28,6 @@
  * ============================================================================
  */
 
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -36,7 +35,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <functional>
-#include <climits>
 #include "../include/userDataLoading.h"
 #include "../include/constants.h"
 
@@ -76,8 +74,11 @@ void loadUserFinancialProfile(UserData& user, const std::string filename) {
         {"Current-annual-roth-contribution", [&](const std::string& v) { user.contributionRoth = stoi(v); }},
         {"Current-annual-ira-contribution",  [&](const std::string& v) { user.contributionIra = stoi(v); }},
         {"Current-annual-r401k-contribution", [&](const std::string& v) { user.contributionR401k = stoi(v); }},
+        {"Pension-estimate",            [&](const std::string& v) { user.pensionEstimate = stoi(v); }},
         {"Inflation",                   [&](const std::string& v) { user.initialInflation = stof(v); }},
-        {"Years-till-retirement",       [&](const std::string& v) { user.yearsTillRetirement = static_cast<unsigned short>(stoi(v)); }}
+        {"Years-till-retirement",       [&](const std::string& v) { user.yearsTillRetirement = static_cast<unsigned short>(stoi(v)); }},
+        {"Years-till-withdrawal",       [&](const std::string& v) { user.yearsTillWithdrawal = static_cast<unsigned short>(stoi(v)); }},
+        {"Years-till-pension",          [&](const std::string& v) { user.yearsTillPension = static_cast<unsigned short>(stoi(v)); }}
     };
 
     while (getline(file, line)) {
@@ -92,25 +93,34 @@ void loadUserFinancialProfile(UserData& user, const std::string filename) {
             getline(ss, key, '=');
             key = trim(key);
 
-            if ((section == "Assets") && index < MAX_ACCOUNTS) {
-                getline(ss, value1, ',');
-                getline(ss, value2);
-                user.name[index] = key;
-                user.value[index] = stoi(value1);
-                user.rate[index++] = stof(value2);
+            try {
+                if ((section == "Assets") && index < MAX_ACCOUNTS) {
+                    getline(ss, value1, ',');
+                    getline(ss, value2);
+                    user.name[index] = key;
+                    user.value[index] = stoi(value1);
+                    user.rate[index++] = stof(value2);
 
-            } else if (section == "General") {
-                getline(ss, value1, ',');
-                auto it = generalHandlers.find(key);
-                if (it != generalHandlers.end()) {
-                    try {
-                        it->second(value1);
-                    } catch (const std::exception& e) {
-                        std::cerr << "Error: could not parse key " << key \
-                                 << " :" << e.what() << std::endl;
+                } else if (section == "General") {
+                    getline(ss, value1, ',');
+                    auto it = generalHandlers.find(key);
+                    if (it != generalHandlers.end()) {
+                        try {
+                            it->second(value1);
+                        } catch (const std::exception& e) {
+                            throw std::runtime_error("Error parsing value for '" + key + "': " + e.what());
+                        }
+                    }
+                    else {
+                        throw std::runtime_error("Unknown key in General section: " + key);
                     }
                 }
+            } catch (const std::invalid_argument& e) {
+                throw std::runtime_error("Invalid format on line '" + line + "': " + e.what());
+            } catch (const std::out_of_range& e) {
+                throw std::runtime_error("Out-of-range number on line '" + line + "': " + e.what());
             }
+            
         }
     }
     file.close();
@@ -124,10 +134,10 @@ bool userDataWithinBounds(const UserData& user) {
     /* Initialize a count for the number of out-of-bounds data identified */
     unsigned int outOfBounds = 0;
     for (int c = 0; c < MAX_ACCOUNTS; c++) {
-        if ((user.value[c] < 0) || (user.value[c] >=INT_MAX)) {
+        if (user.value[c] < 0) {
             outOfBounds++;
             std::cerr << "ERROR: starting value for " << user.name[c] \
-                      << " must be non-negative and less than " << INT_MAX \
+                      << " must be non-negative" \
                       << std::endl;
         }
         if ((user.rate[c] < 0) || (user.rate[c] > MAX_AVG_GROWTH)) {
@@ -137,17 +147,15 @@ bool userDataWithinBounds(const UserData& user) {
                       << "]" << std::endl;
         }
     }
-    if ((user.initialExpense < 0) || (user.initialExpense >= INT_MAX)) {
+    if (user.initialExpense < 0) {
         outOfBounds++;
-        std::cerr << "ERROR: current annual expense " \
-                    << " must be non-negative and less than " << INT_MAX \
-                    << std::endl;
+        std::cerr << "ERROR: current annual expense must be non-negative" \
+                  << std::endl;
     }
-    if ((user.takehomeIncome < 0) || (user.takehomeIncome >= INT_MAX)) {
+    if (user.takehomeIncome < 0) {
         outOfBounds++;
-        std::cerr << "ERROR: current takehome income " \
-                    << " must be non-negative and less than " << INT_MAX \
-                    << std::endl;
+        std::cerr << "ERROR: current takehome income must be non-negative" \
+                  << std::endl;
     }
     if ((user.contributionRoth < 0) || (user.contributionRoth > MAX_ROTH_CONTRIBUTION)) {
         outOfBounds++;
@@ -167,6 +175,11 @@ bool userDataWithinBounds(const UserData& user) {
                     << " must be non-negative and less than " << MAX_R401K_CONTRIBUTION \
                     << std::endl;
     }
+    if (user.pensionEstimate < 0) {
+        outOfBounds++;
+        std::cerr << "ERROR: pension estimate must be non-negative" \
+                  << std::endl;
+    }
     if ((user.initialInflation < 0) || (user.initialInflation > MAX_AVG_INFLATION)) {
         outOfBounds++;
         std::cerr << "ERROR: inflation must be within [0, " << MAX_AVG_INFLATION \
@@ -175,6 +188,16 @@ bool userDataWithinBounds(const UserData& user) {
     if ((user.yearsTillRetirement < 0) || (user.yearsTillRetirement > MAX_YEARS)) {
         outOfBounds++;
         std::cerr << "ERROR: years till retirement must be within [0, " << MAX_YEARS \
+                  << "]" << std::endl;
+    }
+    if ((user.yearsTillWithdrawal < 0) || (user.yearsTillWithdrawal > MAX_YEARS)) {
+        outOfBounds++;
+        std::cerr << "ERROR: years till withdrawal must be within [0, " << MAX_YEARS \
+                  << "]" << std::endl;
+    }
+    if ((user.yearsTillPension < 0) || (user.yearsTillPension > MAX_YEARS)) {
+        outOfBounds++;
+        std::cerr << "ERROR: years till pension must be within [0, " << MAX_YEARS \
                   << "]" << std::endl;
     }
     if (outOfBounds) {
@@ -196,7 +219,10 @@ void displayUserInfo(const UserData& user) {
     std::cout << "Annual 401k contribution: $" << user.contributionR401k << std::endl;
     std::cout << "Expense: $" << user.initialExpense << std::endl;
     std::cout << "Inflation Rate: " << user.initialInflation << std::endl;
+    std::cout << "Pension Estimate: $" << user.pensionEstimate << std::endl;
     std::cout << "Years till retirement: " << user.yearsTillRetirement << std::endl;
+    std::cout << "Years till withdrawal: " << user.yearsTillWithdrawal << std::endl;
+    std::cout << "Years till pension: " << user.yearsTillPension << std::endl;
 
     std::cout << "\nUser's Asset Data:" << std::endl;
     for (int i = 0; i < MAX_ACCOUNTS; i++) {

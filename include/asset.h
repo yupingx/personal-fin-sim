@@ -64,8 +64,14 @@ public:
 	/* Account names */
 	std::array<std::string, MAX_ACCOUNTS> name_;
 
-	/* Number of years before reaching retirement */
+	/* Number of years before reaching retirement (i.e. job income stops)*/
 	int yearsTillRetirement_;
+
+	/* Number of years before withdrawing from tax-deferred investments */
+	int yearsTillWithdrawal_;
+
+	/* Number of years before pension income starts */
+	int yearsTillPension_;
 
 	/* Current year take-home job income after tax and roth/ira/401k contributions. */
 	long int takehomeIncome_;
@@ -78,6 +84,9 @@ public:
 
 	/* Current year contribution to 401k */
 	long int contributionR401k_;
+
+	/* Initial estimate of pension income in today's value */
+	int pensionEstimate_;
 
 	/* 2D array of pre-distribution value for each year and each account */
 	std::array<std::array<long int, MAX_YEARS>, MAX_ACCOUNTS> value_;

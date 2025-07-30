@@ -19,7 +19,7 @@
 /**
  * @brief Number of total interations run for randomized model simulation.
  */
-const unsigned int ITERATIONS = 1000;
+const unsigned int ITERATIONS = 5000;
 
 /**
  * @brief Bin width (in number of years).
